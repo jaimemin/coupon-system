@@ -56,6 +56,36 @@ class ApplyServiceTest {
         latch.await();
         long count = couponRepository.count();
 
+        // kafka에서 처리되는 속도를 감안해서 넉넉하게
+        Thread.sleep(1000 * 10);
+
         assertThat(count).isEqualTo(100L);
+    }
+
+    @Test
+    public void 한명당_한개의쿠폰만_발급() throws InterruptedException {
+        int threadCount = 1000;
+        ExecutorService executorService = Executors.newFixedThreadPool(32);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            long userId = 1L;
+
+            executorService.submit(() -> {
+                try {
+                    applyService.apply(userId);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await();
+        long count = couponRepository.count();
+
+        // kafka에서 처리되는 속도를 감안해서 넉넉하게
+        Thread.sleep(1000 * 10);
+
+        assertThat(count).isEqualTo(1L);
     }
 }

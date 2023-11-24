@@ -1,6 +1,7 @@
 package com.tistory.jaimemin.api.service;
 
-import com.tistory.jaimemin.api.domain.Coupon;
+import com.tistory.jaimemin.api.producer.CouponCreateProducer;
+import com.tistory.jaimemin.api.repository.AppliedUserRepository;
 import com.tistory.jaimemin.api.repository.CouponCountRepository;
 import com.tistory.jaimemin.api.repository.CouponRepository;
 import org.springframework.stereotype.Service;
@@ -14,10 +15,18 @@ public class ApplyService {
 
     private final CouponCountRepository couponCountRepository;
 
+    private final CouponCreateProducer couponCreateProducer;
+
+    private final AppliedUserRepository appliedUserRepository;
+
     public ApplyService(CouponRepository couponRepository
-            , CouponCountRepository couponCountRepository) {
+            , CouponCountRepository couponCountRepository
+            , CouponCreateProducer couponCreateProducer
+            , AppliedUserRepository appliedUserRepository) {
         this.couponRepository = couponRepository;
         this.couponCountRepository = couponCountRepository;
+        this.couponCreateProducer = couponCreateProducer;
+        this.appliedUserRepository = appliedUserRepository;
     }
 
     /**
@@ -26,12 +35,18 @@ public class ApplyService {
      * @param userId
      */
     public void apply(Long userId) {
+        Long appliedCnt = appliedUserRepository.add(userId);
+
+        if (appliedCnt != 1) {
+            return;
+        }
+
         long count = couponCountRepository.increment();
 
         if (count > MAX_COUPON_CNT) {
             return;
         }
 
-        couponRepository.save(new Coupon(userId));
+        couponCreateProducer.create(userId);
     }
 }
